@@ -13,7 +13,7 @@ const winDir = `\AppData\Local\Google\Chrome\User Data\default\Cookies`
 
 func LoadCookieFromChrome(domain string) ([]*http.Cookie, error) {
 	var cookies []*http.Cookie
-	db, err := ConnectDataBase(winDir)
+	db, err := ConnectDatabase(winDir)
 	defer db.Close()
 	if err != nil {
 		fmt.Println(err)
@@ -25,7 +25,7 @@ func LoadCookieFromChrome(domain string) ([]*http.Cookie, error) {
 	return cookies, nil
 }
 
-func ConnectDataBase(location string) (*sql.DB, error) {
+func ConnectDatabase(location string) (*sql.DB, error) {
 	usr, _ := user.Current()
 	cookiesFile := fmt.Sprintf(`%s%s`, usr.HomeDir, location)
 	db, err := sql.Open("sqlite3", cookiesFile)
@@ -35,7 +35,8 @@ func ConnectDataBase(location string) (*sql.DB, error) {
 	return db, err
 }
 
-//source:
+const retrieveQ = `SELECT host_key,name,path,is_secure,is_httponly,expires_utc,value FROM cookies where host_key like ?`
+
 func ReadFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
 	var (
 		domain, name, path, value string
@@ -47,11 +48,12 @@ func ReadFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	rows, err := db.Query("SELECT host_key,name,path,is_secure,is_httponly,expires_utc,value FROM cookies where host_key like ?", targetDomain)
+	rows, err := db.Query(retrieveQ, "%"+targetDomain+"%")
 	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}
+
 	for rows.Next() {
 		err = rows.Scan(&domain, &name, &path, &secure, &httponly, &expire, &value)
 		result = append(result, http.Cookie{
