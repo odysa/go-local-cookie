@@ -7,4 +7,5 @@ require (
 	github.com/gonuts/binary v0.2.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.4
+	github.com/tidwall/gjson v1.6.1
 )

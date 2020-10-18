@@ -1,9 +1,11 @@
-package main
+package chrome
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestConnectDataBase(t *testing.T) {
-	db, err := ConnectDatabase(winDir)
+	db, err := connectDatabase(winDir)
 	defer db.Close()
 	if err != nil {
 		panic(err)
@@ -12,13 +14,14 @@ func TestConnectDataBase(t *testing.T) {
 		t.Errorf("db connect should not be nil!")
 	}
 }
+
 func TestReadFromSqlite(t *testing.T) {
-	db, err := ConnectDatabase(winDir)
+	db, err := connectDatabase(winDir)
 	defer db.Close()
 	if err != nil {
 		panic(err)
 	}
-	res, err := ReadFromSqlite(db, "")
+	res, err := readFromSqlite(db, "")
 	if err != nil {
 		panic(err)
 	}

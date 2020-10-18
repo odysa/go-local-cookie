@@ -1,4 +1,4 @@
-package main
+package chrome
 
 import (
 	"database/sql"
@@ -9,25 +9,33 @@ import (
 	"time"
 )
 
+const (
+	windows = "win"
+	macos   = "mac"
+	linux   = "linux"
+)
+
 const winDir = `\AppData\Local\Google\Chrome\User Data\default\Cookies`
 
-func LoadCookieFromChrome(domain string) ([]*http.Cookie, error) {
-	var cookies []*http.Cookie
-	db, err := ConnectDatabase(winDir)
-	defer db.Close()
+func LoadCookieFromChrome(domain string) ([]http.Cookie, error) {
+
+	db, err := connectDatabase(winDir)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
+	defer db.Close()
 
-	ReadFromSqlite(db, domain)
-
-	return cookies, nil
+	res, err := readFromSqlite(db, domain)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
-func ConnectDatabase(location string) (*sql.DB, error) {
-	usr, _ := user.Current()
-	cookiesFile := fmt.Sprintf(`%s%s`, usr.HomeDir, location)
+func connectDatabase(location string) (*sql.DB, error) {
+
+	cookiesFile := getUsrDir() + location
+
 	db, err := sql.Open("sqlite3", cookiesFile)
 	if err != nil {
 		return nil, err
@@ -37,7 +45,7 @@ func ConnectDatabase(location string) (*sql.DB, error) {
 
 const retrieveQ = `SELECT host_key,name,path,is_secure,is_httponly,expires_utc,value FROM cookies where host_key like ?`
 
-func ReadFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
+func readFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
 	var (
 		domain, name, path, value string
 		secure, httponly          bool
@@ -49,21 +57,25 @@ func ReadFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
 		fmt.Println(err)
 	}
 	rows, err := db.Query(retrieveQ, "%"+targetDomain+"%")
-	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		err = rows.Scan(&domain, &name, &path, &secure, &httponly, &expire, &value)
+		decodedValue, err := chromeDecrypt([]byte(value))
+		if err != nil {
+			decodedValue = ""
+		}
 		result = append(result, http.Cookie{
 			Domain:   domain,
 			Name:     name,
 			Path:     path,
 			Secure:   secure,
 			HttpOnly: httponly,
-			Expires:  chromeCookieDate(expire),
-			Value:    decrypt(value),
+			Expires:  getChromeCookieDate(expire),
+			Value:    decodedValue,
 		})
 	}
 
@@ -76,10 +88,15 @@ const windowsToUnixMicrosecondsOffset = 11644473600000000
 
 // chromeCookieDate converts microseconds to a time.Time object,
 // accounting for the switch to Windows epoch (Jan 1 1601).
-func chromeCookieDate(timestampUtc int64) time.Time {
+func getChromeCookieDate(timestampUtc int64) time.Time {
 	if timestampUtc > windowsToUnixMicrosecondsOffset {
 		timestampUtc -= windowsToUnixMicrosecondsOffset
 	}
 
 	return time.Unix(timestampUtc/1000000, (timestampUtc%1000000)*1000)
+}
+
+func getUsrDir() string {
+	usr, _ := user.Current()
+	return usr.HomeDir
 }
