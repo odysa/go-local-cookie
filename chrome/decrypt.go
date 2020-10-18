@@ -1,19 +1,24 @@
 package chrome
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"encoding/base64"
+	"encoding/hex"
+	"fmt"
+	dpapi "github.com/go-local-cookie/chrome/win"
 	"github.com/tidwall/gjson"
 	"io/ioutil"
 )
 
 const keyDirWin = `\AppData\Local\Google\Chrome\User Data\Local State`
 
-func chromeDecrypt(encrypted []byte) (string, error) {
-	return aesDecrypt(string(encrypted))
+func chromeDecrypt(encrypted string) (string, error) {
+	return aesDecrypt(encrypted)
 }
 
 func aesDecrypt(encrypted string) (string, error) {
-	key,err := getKeyFromChrome("win")
+	key, err := getKeyFromChrome("win")
 	if err != nil {
 		return "", err
 	}
@@ -22,9 +27,26 @@ func aesDecrypt(encrypted string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	decodedKey = decodedKey[5:]
+	decodedKey, err = dpapi.DecryptBytes(decodedKey[5:])
+	var nonce string
+	fmt.Println(encrypted)
+	if len(encrypted) > 15 {
+		nonce = encrypted[3:15]
+	}
 
-	return string(decodedKey), nil
+	block, err := aes.NewCipher(decodedKey)
+	if err != nil {
+		return "", err
+	}
+
+	aesGcm, err := cipher.NewGCM(block)
+	deNonce,_ := hex.DecodeString(nonce)
+	deText,_ := hex.DecodeString(encrypted)
+	text, err := aesGcm.Open(nil, deNonce, deText, nil)
+	if err != nil {
+		return "", err
+	}
+	return string(text), nil
 }
 
 func readJsonFile(fileName string) (string, error) {

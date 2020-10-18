@@ -9,12 +9,6 @@ import (
 	"time"
 )
 
-const (
-	windows = "win"
-	macos   = "mac"
-	linux   = "linux"
-)
-
 const winDir = `\AppData\Local\Google\Chrome\User Data\default\Cookies`
 
 func LoadCookieFromChrome(domain string) ([]http.Cookie, error) {
@@ -43,7 +37,7 @@ func connectDatabase(location string) (*sql.DB, error) {
 	return db, err
 }
 
-const retrieveQ = `SELECT host_key,name,path,is_secure,is_httponly,expires_utc,value FROM cookies where host_key like ?`
+const retrieveQ = `SELECT host_key,name,path,is_secure,is_httponly,expires_utc,encrypted_value FROM cookies where host_key like ?`
 
 func readFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
 	var (
@@ -64,9 +58,9 @@ func readFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
 
 	for rows.Next() {
 		err = rows.Scan(&domain, &name, &path, &secure, &httponly, &expire, &value)
-		decodedValue, err := chromeDecrypt([]byte(value))
+		decodedValue, err := chromeDecrypt(value)
 		if err != nil {
-			decodedValue = ""
+			panic(err)
 		}
 		result = append(result, http.Cookie{
 			Domain:   domain,
