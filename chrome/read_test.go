@@ -6,7 +6,7 @@ import (
 
 func TestGetCookies(t *testing.T) {
 	// test empty name
-	res, err := getCookiesCore("google.com", "")
+	res, err := GetCookies("google.com", "")
 	if err != nil {
 		t.Errorf("failed to load cookie")
 	}
@@ -15,14 +15,14 @@ func TestGetCookies(t *testing.T) {
 	}
 
 	// test empty domain
-	res, err = getCookiesCore("", "SID")
+	res, err = GetCookies("", "SID")
 	if err != nil {
 		t.Errorf("failed to load cookie,%v", err)
 	}
 	if len(res) == 0 {
 		t.Errorf("cookies should not be empty")
 	}
-	res, err = getCookiesCore("google.com", "SID")
+	res, err = GetCookies("google.com", "SID")
 	if err != nil {
 		t.Errorf("failed to load cookie,%v", err)
 	}

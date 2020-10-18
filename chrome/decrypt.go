@@ -11,7 +11,7 @@ import (
 
 const keyDirWin = `\AppData\Local\Google\Chrome\User Data\Local State`
 
-func chromeDecrypt(encrypted string) (string, error) {
+func decrypt(encrypted string) (string, error) {
 	return aesDecrypt(encrypted)
 }
 
@@ -21,13 +21,14 @@ func aesDecrypt(encrypted string) (string, error) {
 		return "", err
 	}
 
+	// decode key of aes
 	decodedKey, err := base64.RawStdEncoding.DecodeString(key)
 	if err != nil {
 		return "", err
 	}
-
 	decodedKey, err = dpapi.DecryptBytes(decodedKey[5:])
 
+	// get nonce and text of value
 	nonce, text := parseText(encrypted)
 
 	block, err := aes.NewCipher(decodedKey)
@@ -36,7 +37,7 @@ func aesDecrypt(encrypted string) (string, error) {
 	}
 
 	aesGcm, err := cipher.NewGCM(block)
-
+	// decipher
 	res, err := aesGcm.Open(nil, nonce, text, nil)
 
 	if err != nil {
@@ -44,6 +45,7 @@ func aesDecrypt(encrypted string) (string, error) {
 	}
 	return string(res), nil
 }
+
 // parse new algorithm
 func parseText(encrypted string) (nonce []byte, text []byte) {
 	nonce = []byte(encrypted[3:15])
@@ -61,6 +63,7 @@ func readJsonFile(fileName string) (string, error) {
 	return string(bytes), nil
 }
 
+// get key from chrome storage
 func getKeyFromChrome(os string) (string, error) {
 	var key string
 	if os == "win" {

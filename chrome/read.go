@@ -79,7 +79,7 @@ func readFromSqlite(db *sql.DB, targetDomain string, targetName string) ([]http.
 
 	for rows.Next() {
 		err = rows.Scan(&domain, &name, &path, &secure, &httponly, &expire, &value)
-		decodedValue, err := chromeDecrypt(value)
+		decodedValue, err := decrypt(value)
 		if err != nil {
 			panic(err)
 		}

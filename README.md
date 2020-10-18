@@ -1,5 +1,5 @@
 # go-local-cookie
 
-Load cookie from local file
+Read cookie from local storage
 
 Chrome(Windows) supported now
