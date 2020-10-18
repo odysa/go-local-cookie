@@ -6,8 +6,9 @@ import (
 )
 
 func main() {
-	_,err:= chrome.LoadCookieFromChrome(".zhaopin.com")
+	res,err:= chrome.GetCookiesByDomain("zhaopin.com")
 	if err!=nil{
 		fmt.Println(err)
 	}
+	fmt.Println(res)
 }

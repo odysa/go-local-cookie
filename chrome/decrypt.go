@@ -4,8 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
-	"encoding/hex"
-	"fmt"
 	dpapi "github.com/go-local-cookie/chrome/win"
 	"github.com/tidwall/gjson"
 	"io/ioutil"
@@ -23,16 +21,14 @@ func aesDecrypt(encrypted string) (string, error) {
 		return "", err
 	}
 
-	decodedKey, err := base64.StdEncoding.DecodeString(key)
+	decodedKey, err := base64.RawStdEncoding.DecodeString(key)
 	if err != nil {
 		return "", err
 	}
+
 	decodedKey, err = dpapi.DecryptBytes(decodedKey[5:])
-	var nonce string
-	fmt.Println(encrypted)
-	if len(encrypted) > 15 {
-		nonce = encrypted[3:15]
-	}
+
+	nonce, text := parseText(encrypted)
 
 	block, err := aes.NewCipher(decodedKey)
 	if err != nil {
@@ -40,13 +36,19 @@ func aesDecrypt(encrypted string) (string, error) {
 	}
 
 	aesGcm, err := cipher.NewGCM(block)
-	deNonce,_ := hex.DecodeString(nonce)
-	deText,_ := hex.DecodeString(encrypted)
-	text, err := aesGcm.Open(nil, deNonce, deText, nil)
+
+	res, err := aesGcm.Open(nil, nonce, text, nil)
+
 	if err != nil {
 		return "", err
 	}
-	return string(text), nil
+	return string(res), nil
+}
+// parse new algorithm
+func parseText(encrypted string) (nonce []byte, text []byte) {
+	nonce = []byte(encrypted[3:15])
+	text = []byte(encrypted[15:])
+	return
 }
 
 func readJsonFile(fileName string) (string, error) {

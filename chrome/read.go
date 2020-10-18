@@ -2,7 +2,6 @@ package chrome
 
 import (
 	"database/sql"
-	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"net/http"
 	"os/user"
@@ -11,7 +10,25 @@ import (
 
 const winDir = `\AppData\Local\Google\Chrome\User Data\default\Cookies`
 
-func LoadCookieFromChrome(domain string) ([]http.Cookie, error) {
+const queryStr = `SELECT host_key,name,path,is_secure,is_httponly,expires_utc,encrypted_value FROM cookies where host_key like ?`
+
+func GetCookies(domain string, name string) ([]http.Cookie, error) {
+	return getCookiesCore(domain, name)
+}
+
+func GetCookieByName(name string) (http.Cookie, error) {
+	res, err := getCookiesCore("", name)
+	if err != nil {
+		return http.Cookie{}, err
+	}
+	return res[0], nil
+}
+func GetCookiesByDomain(domain string) ([]http.Cookie, error) {
+	return getCookiesCore(domain, "")
+}
+
+
+func getCookiesCore(domain string, name string) ([]http.Cookie, error) {
 
 	db, err := connectDatabase(winDir)
 	if err != nil {
@@ -19,7 +36,7 @@ func LoadCookieFromChrome(domain string) ([]http.Cookie, error) {
 	}
 	defer db.Close()
 
-	res, err := readFromSqlite(db, domain)
+	res, err := readFromSqlite(db, domain, name)
 	if err != nil {
 		return nil, err
 	}
@@ -37,9 +54,8 @@ func connectDatabase(location string) (*sql.DB, error) {
 	return db, err
 }
 
-const retrieveQ = `SELECT host_key,name,path,is_secure,is_httponly,expires_utc,encrypted_value FROM cookies where host_key like ?`
-
-func readFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
+// read cookies from chrome's sqlite3 data
+func readFromSqlite(db *sql.DB, targetDomain string, targetName string) ([]http.Cookie, error) {
 	var (
 		domain, name, path, value string
 		secure, httponly          bool
@@ -48,9 +64,14 @@ func readFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
 	)
 	err := db.Ping()
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
-	rows, err := db.Query(retrieveQ, "%"+targetDomain+"%")
+	var query = queryStr
+	if len(targetName) > 0 {
+		query += `AND name is ?`
+	}
+
+	rows, err := db.Query(query, "%"+targetDomain+"%", targetName)
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +93,6 @@ func readFromSqlite(db *sql.DB, targetDomain string) ([]http.Cookie, error) {
 			Value:    decodedValue,
 		})
 	}
-
-	fmt.Printf("%v\n", result)
 	return result, nil
 }
 
