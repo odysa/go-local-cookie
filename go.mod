@@ -1,4 +1,4 @@
-module github.com/go-local-cookie
+module github.com/odysa/go-local-cookie
 
 go 1.15
 
