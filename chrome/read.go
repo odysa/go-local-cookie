@@ -12,23 +12,7 @@ const winDir = `\AppData\Local\Google\Chrome\User Data\default\Cookies`
 
 const queryStr = `SELECT host_key,name,path,is_secure,is_httponly,expires_utc,encrypted_value FROM cookies where host_key like ?`
 
-func GetCookies(domain string, name string) ([]http.Cookie, error) {
-	return getCookiesCore(domain, name)
-}
-
-func GetCookieByName(name string) (http.Cookie, error) {
-	res, err := getCookiesCore("", name)
-	if err != nil {
-		return http.Cookie{}, err
-	}
-	return res[0], nil
-}
-func GetCookiesByDomain(domain string) ([]http.Cookie, error) {
-	return getCookiesCore(domain, "")
-}
-
-
-func getCookiesCore(domain string, name string) ([]http.Cookie, error) {
+func GetCookiesCore(domain string, name string) ([]http.Cookie, error) {
 
 	db, err := connectDatabase(winDir)
 	if err != nil {
