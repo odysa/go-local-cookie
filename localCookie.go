@@ -1,7 +1,7 @@
 package localCookie
 
 import (
-	"github.com/go-local-cookie/chrome"
+	"github.com/odysa/go-local-cookie/chrome"
 	"net/http"
 )
 

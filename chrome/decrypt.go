@@ -4,7 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
-	dpapi "github.com/go-local-cookie/chrome/win"
+	dpapi "github.com/odysa/go-local-cookie/chrome/win"
 	"github.com/tidwall/gjson"
 	"io/ioutil"
 )
